@@ -292,7 +292,7 @@
       "post-make": []
     }
   },
-  "z-m2k": {
+  "m2k": {
     "source": "https://github.com/madcock/libretro-mame2000",
     "branch": "231929ab69e7538bc1d98f59634b8d7fee2ddde7",
     "directory": "libretro-cores/libretro-mame2000/",
@@ -307,7 +307,7 @@
       "post-make": []
     }
   }, 
-  "z-m2k-n": {
+  "m2k-n": {
     "source": "https://github.com/Data-Frog-Central/libretro-mamenummacwaytausend",
     "branch": "b9d2a36f13ca86c6537ed9043ac4e7c097470a58",
     "directory": "libretro-cores/libretro-mamenummacwaytausend/",

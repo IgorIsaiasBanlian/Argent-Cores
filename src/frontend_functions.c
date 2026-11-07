@@ -6,7 +6,9 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <time.h>
 #include <sys/stat.h>
+#include <sys/times.h>
 #include <sys/types.h>
 
 #include <libretro.h>
@@ -18,13 +20,9 @@
 #undef _calloc_r
 #undef _realloc_r
 
-extern int (*xlog)(const char *, ...);
-
-char* ram_buffer = NULL;
-size_t ram_buffer_size = 64 * 1024 * 1024;  // 64 MB
-
 struct frontend_functions_t frontend_functions;
 
+extern int (*xlog)(const char *, ...);
 int (*xlog)(const char *format, ...) = printf;
 void (*frontend_log_cb)(enum retro_log_level level, const char *tag, const char *fmt, ...) = NULL;
 
@@ -41,6 +39,32 @@ void abort(void) {
     while (1) {}  // Should never return
 }
 
+int kill(pid_t pid, int sig) {
+    return frontend_functions.kill(pid, sig);
+}
+
+pid_t getpid(void) {
+    return frontend_functions.getpid();
+}
+
+//      Memory Management        //
+void *_malloc_r(struct _reent *r, size_t size) {
+    return frontend_functions.malloc(size);
+}
+
+void _free_r(struct _reent *r, void *ptr) {
+    frontend_functions.free(ptr);
+}
+
+void *_calloc_r(struct _reent *r, size_t n, size_t size) {
+    return frontend_functions.calloc(n, size);
+}
+
+void *_realloc_r(struct _reent *r, void *ptr, size_t size) {
+    return frontend_functions.realloc(ptr, size);
+}
+
+//      Cache Management        //
 void full_cache_flush() {
 	unsigned idx;
 
@@ -63,22 +87,20 @@ void _flush_cache(void* start, void* end) {
     full_cache_flush();
 }
 
-void *_malloc_r(struct _reent *r, size_t size) {
-    return frontend_functions.malloc(size);
+//      Time Functions      //
+uint32_t get_time_ms(void) {
+    return frontend_functions.get_time_ms();
 }
 
-void _free_r(struct _reent *r, void *ptr) {
-    frontend_functions.free(ptr);
+int gettimeofday(struct timeval *tv, void *tz) {
+    return frontend_functions.gettimeofday(tv, tz);
 }
 
-void *_calloc_r(struct _reent *r, size_t n, size_t size) {
-    return frontend_functions.calloc(n, size);
+clock_t times(struct tms *buf) {
+    return frontend_functions.times(buf);
 }
 
-void *_realloc_r(struct _reent *r, void *ptr, size_t size) {
-    return frontend_functions.realloc(ptr, size);
-}
-
+//      File System     //
 int	stat(const char *path, struct stat *sbuf) {
     return frontend_functions.stat(path, sbuf);
 }
@@ -87,21 +109,43 @@ int fstat(int fd, struct stat *sbuf) {
     return frontend_functions.fstat(fd, sbuf);
 }
 
-int kill(pid_t pid, int sig) {
-    return frontend_functions.kill(pid, sig);
+int access(const char *path, int amode) {
+    return frontend_functions.access(path, amode);
 }
 
-pid_t getpid(void) {
-    return frontend_functions.getpid();
+int mkdir(const char *pathname, mode_t mode) {
+    return frontend_functions.mkdir(pathname, mode);
 }
 
-int gettimeofday(struct timeval *tv, void *tz) {
-    return frontend_functions.gettimeofday(tv, tz);
+int rmdir(const char *pathname) {
+    return frontend_functions.rmdir(pathname);
 }
 
-//      Time Functions      //
-uint32_t get_time_ms(void) {
-    return frontend_functions.get_time_ms();
+int rename(const char *oldpath, const char *newpath) {
+    return frontend_functions.rename(oldpath, newpath);
+}
+
+int chdir(const char *path) {
+    return frontend_functions.chdir(path);
+}
+
+char *getcwd(char *buf, size_t size) {
+    return frontend_functions.getcwd(buf, size);
+}
+
+int link(const char *__path1, const char *__path2) {
+    (void)__path1;
+    (void)__path2;
+
+    return -1;
+}
+
+int unlink(const char *__path) {
+    return frontend_functions.unlink(__path);
+}
+
+int chmod(const char *path, mode_t mode) {
+	return -1;
 }
 
 //      I/O Operations      //
@@ -137,17 +181,6 @@ int isatty(int fd) {
 
 off_t lseek(int fd, off_t offset, int whence) {
     return frontend_functions.lseek(fd, offset, whence);
-}
-
-int link(const char *__path1, const char *__path2) {
-    (void)__path1;
-    (void)__path2;
-
-    return -1;
-}
-
-int unlink(const char *__path) {
-    return frontend_functions.unlink(__path);
 }
 
 //      Dirent      //

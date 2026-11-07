@@ -29,6 +29,43 @@ const mars_header_t __mars_header = {
 	.end           = (uint32_t)(uintptr_t)&_end
 };
 
+static void clear_bss(struct frontend_functions_t *frontend_funcs) {
+	extern void *__bss_start;
+
+    uintptr_t start = (uintptr_t)&__bss_start;
+    uintptr_t end   = (uintptr_t)&_end;
+
+    frontend_funcs->memset((void *)start, 0, end - start);
+}
+
+// call_ctors currently is not being used since __libc_init_array will handle that instead.
+// but leave it here for now if there would be a need to debug a crash during the static init phase.
+static void call_ctors(void) {
+	typedef void (*func_ptr) (void);
+	extern func_ptr __init_array_start;
+	extern func_ptr __init_array_end;
+
+	frontend_log_cb(RETRO_LOG_DEBUG, "CORE_API" ,"call_ctors: start=%p end=%p\n", &__init_array_start, &__init_array_end);
+
+	// call ctors from last to first
+	for (func_ptr *pfunc = &__init_array_end - 1; pfunc >= &__init_array_start; --pfunc) {
+		frontend_log_cb(RETRO_LOG_DEBUG, "CORE_API" ,"pfunc=%p func=%p\n", pfunc, *pfunc);
+		(*pfunc)();
+	}
+}
+
+// TODO: need a place to call dtors as well. maybe part of core_exports or the header.
+static void call_dtors(void) {
+	typedef void (*func_ptr) (void);
+	extern func_ptr __fini_array_start;
+	extern func_ptr __fini_array_end;
+
+	// dtors are called in reverse order of ctors
+	for (func_ptr *pfunc = &__fini_array_start; pfunc < &__fini_array_end; ++pfunc) {
+		(*pfunc)();
+	}
+}
+
 struct retro_core_t core_exports = {
 	.retro_init = retro_init,
 	.retro_deinit = retro_deinit,
@@ -55,44 +92,8 @@ struct retro_core_t core_exports = {
 	.retro_get_region = retro_get_region,
 	.retro_get_memory_data = retro_get_memory_data,
 	.retro_get_memory_size = retro_get_memory_size,
+	.call_dtors = call_dtors,
 };
-
-static void clear_bss(struct frontend_functions_t *frontend_funcs) {
-	extern void *__bss_start;
-
-    uintptr_t start = (uintptr_t)&__bss_start;
-    uintptr_t end   = (uintptr_t)&_end;
-
-    frontend_funcs->memset((void *)start, 0, end - start);
-}
-
-// call_ctors currently is not being used since __libc_init_array will handle that instead.
-// but leave it here for now if there would be a need to debug a crash during the static init phase.
-static void call_ctors() {
-	typedef void (*func_ptr) (void);
-	extern func_ptr __init_array_start;
-	extern func_ptr __init_array_end;
-
-	frontend_log_cb(RETRO_LOG_DEBUG, "CORE_API" ,"call_ctors: start=%p end=%p\n", &__init_array_start, &__init_array_end);
-
-	// call ctors from last to first
-	for (func_ptr *pfunc = &__init_array_end - 1; pfunc >= &__init_array_start; --pfunc) {
-		frontend_log_cb(RETRO_LOG_DEBUG, "CORE_API" ,"pfunc=%p func=%p\n", pfunc, *pfunc);
-		(*pfunc)();
-	}
-}
-
-// TODO: need a place to call dtors as well. maybe part of core_exports or the header.
-static void call_dtors() {
-	typedef void (*func_ptr) (void);
-	extern func_ptr __fini_array_start;
-	extern func_ptr __fini_array_end;
-
-	// dtors are called in reverse order of ctors
-	for (func_ptr *pfunc = &__fini_array_start; pfunc < &__fini_array_end; ++pfunc) {
-		(*pfunc)();
-	}
-}
 
 struct retro_core_t *__core_entry__(struct frontend_functions_t *frontend_funcs) {
 	clear_bss(frontend_funcs);

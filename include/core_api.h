@@ -43,31 +43,46 @@ struct retro_core_t {
    unsigned (*retro_get_region)(void);
    void *(*retro_get_memory_data)(unsigned);
    size_t (*retro_get_memory_size)(unsigned);
+   void (*call_dtors)(void);
 };
 
 struct frontend_functions_t {
+//      Logging      //
    int (*printf)(const char *__restrict, ...);
    void (*frontend_log_cb)(enum retro_log_level level, const char *tag, const char *fmt, ...);
+//      System Calls    //
    void (*_exit)(int status);
    void (*abort)(void);
+   int (*kill)(pid_t pid, int sig);
+   pid_t (*getpid)(void);
+//      Memory Management     //
    void *(*malloc)(size_t __size);
    void *(*memset)(void *ptr, int value, size_t num);
    void (*free)(void *ptr);
    void *(*calloc)(size_t nmemb, size_t size);
    void *(*realloc)(void *ptr, size_t size);
+//      Time Functions      //
+   uint32_t (*get_time_ms)(void);
+   int (*gettimeofday)(struct timeval *tv, void *tz);
+   clock_t (*times)(struct tms *buf);
+//      File System     //
    int (*stat)(const char *path, struct stat *sbuf);
    int (*fstat)(int fd, struct stat *sbuf);
-   int (*kill)(pid_t pid, int sig);
-   pid_t (*getpid)(void);
-   int (*gettimeofday)(struct timeval *tv, void *tz);
-   uint32_t (*get_time_ms)(void);
+   int (*access)(const char *path, int amode);
+   int (*mkdir)(const char *pathname, mode_t mode);
+   int (*rmdir)(const char *pathname);
+   int (*rename)(const char *oldpath, const char *newpath);
+   int (*chdir)(const char *path);
+   char *(*getcwd)(char *buf, size_t size);
+   int (*unlink)(const char *__path);
+//      I/O Operations      //
    int (*open)(const char *pathname, int flags, ...);
    int (*close)(int fd);
    int (*write)(int fd, const void *buf, size_t count);
    int (*read)(int fd, void *buf, size_t count);
    int (*isatty)(int fd);
    off_t (*lseek)(int fd, off_t offset, int whence);
-   int (*unlink)(const char *__path);
+//      Dirent      //
    DIR *(*opendir)(const char *path);
    int (*closedir)(DIR *dir);
    struct dirent *(*readdir)(DIR *dir);
