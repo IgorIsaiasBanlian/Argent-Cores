@@ -1,7 +1,7 @@
 NPROC=$(shell nproc)
 SHELL:=/bin/bash
 
-MIPS=/opt/frog-toolchain/mipsel-mti-elf_stable/bin/mipsel-mti-elf-
+MIPS=/opt/mips32-mti-elf/2019.09-03-2/bin/mips-mti-elf-
 
 # Core types
 # LIBRETRO = 0x0001
