@@ -24,8 +24,10 @@ CXX = $(MIPS)g++
 LD = $(MIPS)ld
 OBJCOPY = $(MIPS)objcopy
 
-SRC_DIR   := src
-INCLUDE_DIR := include
+SRC_DIR   := $(abspath src)
+INCLUDE_DIR := $(abspath include)
+
+SF2000_INCLUDES := -I $(INCLUDE_DIR) -I $(abspath libretro-common/include)
 
 SF2000_CFLAGS := -EL -march=mips32 -mtune=mips32 -msoft-float
 SF2000_CFLAGS += -O3 -G0 -fno-pic
@@ -56,7 +58,7 @@ all: core.mars
 
 libretro_core:
 	@$(call echo_i,"compiling $(CORE)")
-	$(MAKE) -j$(NPROC) -C "$(CORE)" $(MAKEFILE) platform=sf2000
+	$(MAKE) -j$(NPROC) -C "$(CORE)" $(MAKEFILE) SF2000_INCLUDES="$(SF2000_INCLUDES)" MIPS="$(MIPS)" platform=sf2000
 
 libretro_core.a: libretro_core
 	cp "$(CORE)"/*.a libretro_core.a
@@ -75,6 +77,9 @@ core.elf: libretro_core.a libretro-common.a core_api.o frontend_functions.o
 
 core.mars: core.elf
 	$(OBJCOPY) -O binary -R .MIPS.abiflags -R .note.gnu.build-id -R ".rel*" core.elf "$@"
+	@if [ -n "$(CONSOLE)" ]; then \
+		$(call copy_if_updated,"core.mars","output/$(CONSOLE).mars"); \
+	fi
 
 # Clean intermediate files and the final executable
 clean:
@@ -101,6 +106,6 @@ define echo_d
 endef
 
 define copy_if_updated
-    diff -q $(1) $(2) || { rm -rf $(2) && mkdir -p "$(shell echo $(2) | sed 's:\([^/]*\)[/]*$$::')" && cp $(1) $(2) && echo "$(1) updated"; }
+    diff -q $(1) $(2) || { rm -rf $(2) && mkdir -p "$(shell echo $(2) | sed 's:\([^/]*\)[/]*$$::')" && cp $(1) $(2) && echo "$(2) updated"; }
 endef
 
